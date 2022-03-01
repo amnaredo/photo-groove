@@ -1,4 +1,4 @@
-module PhotoGroove exposing (main)
+port module PhotoGroove exposing (..)
 
 import Browser
 import Html exposing (..)
@@ -122,6 +122,15 @@ type alias Photo =
     }
 
 
+type alias FilterOptions = 
+    { url : String
+    , filters : List { name : String, amount : Int }
+    }
+
+
+port setFilters : FilterOptions -> Cmd msg
+
+
 photoDecoder : Decoder Photo
 photoDecoder =
     succeed Photo
@@ -158,9 +167,11 @@ initialModel =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        GotRandomPhoto photo -> ( { model | status = selectUrl photo.url model.status }, Cmd.none )
+        GotRandomPhoto photo -> 
+            applyFilters { model | status = selectUrl photo.url model.status }
 
-        ClickedPhoto url -> ( { model | status = selectUrl url model.status }, Cmd.none )
+        ClickedPhoto url -> 
+            applyFilters { model | status = selectUrl url model.status }
 
         ClickedSize size -> ( { model | chosenSize = size }, Cmd.none )
 
@@ -220,6 +231,28 @@ update msg model =
 
         SlidNoise noise ->
             ( { model | noise = noise }, Cmd.none)
+
+
+applyFilters : Model -> ( Model, Cmd Msg )
+applyFilters model = 
+    case model.status of
+        Loaded _ selectedUrl ->
+            let
+                filters = 
+                    [ { name = "Hue", amount = model.hue }
+                    , { name = "Ripple", amount = model.ripple }
+                    , { name = "Noise", amount = model.noise }
+                    ]
+                url = 
+                    urlPrefix ++ "large/" ++ selectedUrl
+            in
+            ( model, setFilters { url = url, filters = filters } )
+        
+        Loading ->
+            ( model, Cmd.none )
+
+        Errored _ ->
+            ( model, Cmd.none )
 
 selectUrl : String -> Status -> Status
 selectUrl url status =
