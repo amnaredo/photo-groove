@@ -142,7 +142,7 @@ update msg model =
 
         GotPhotos (Err _) -> 
             ( { model | status = Errored "Server error!" }, Cmd.none )
-            
+
         -- GotPhotos result ->
         --     case result of 
         --         Ok responseStr ->
@@ -172,11 +172,18 @@ selectUrl url status =
         Errored errorMessage ->
             status
 
+initialCmd : Cmd Msg
+initialCmd =
+    Http.get
+        { url = "http://elm-in-action.com/photos/list"
+        , expect = Http.expectString GotPhotos
+        }
+
 main : Program () Model Msg
 main =
     Browser.element
-        { init = \flags -> ( initialModel, Cmd.none )
+        { init = \_ -> ( initialModel, initialCmd )
         , view = view
         , update = update
-        , subscriptions = \model -> Sub.none
+        , subscriptions = \_ -> Sub.none
         }
