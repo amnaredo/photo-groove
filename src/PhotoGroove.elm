@@ -4,6 +4,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Browser
+import Http
 import Random
 
 urlPrefix : String
@@ -12,9 +13,10 @@ urlPrefix =
 
 type Msg 
     = ClickedPhoto String
-    | GotRandomPhoto Photo
     | ClickedSize ThumbnailSize
     | ClickedSurpriseMe
+    | GotRandomPhoto Photo
+    | GotPhotos (Result Http.Error String)
 
 view : Model -> Html Msg
 view model =
@@ -124,6 +126,39 @@ update msg model =
 
                 Errored errorMessage ->
                     ( model, Cmd.none )
+        
+        GotPhotos (Ok responseStr) ->
+
+            case String.split "," responseStr of
+                (firstUrl :: _) as urls ->
+                    let
+                        photos =
+                            List.map Photo urls
+                    in
+                    ( { model | status = Loaded photos firstUrl }, Cmd.none )
+
+                [] ->
+                    ( { model | status = Errored "0 photos found" }, Cmd.none )
+
+        GotPhotos (Err _) -> 
+            ( { model | status = Errored "Server error!" }, Cmd.none )
+            
+        -- GotPhotos result ->
+        --     case result of 
+        --         Ok responseStr ->
+        --             case String.split "," responseStr of
+        --                 (firstUrl :: _) as urls ->
+        --                     let
+        --                         photos =
+        --                             List.map Photo urls
+        --                     in
+        --                     ( { model | status = Loaded photos firstUrl }, Cmd.none )
+
+        --                 [] ->
+        --                     ( { model | status = Errored "0 photos found" }, Cmd.none )
+
+        --         Err httpError ->
+        --             ( { model | status = Errored "Server error!" }, Cmd.none )
 
 selectUrl : String -> Status -> Status
 selectUrl url status =
