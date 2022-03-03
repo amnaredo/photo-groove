@@ -13,12 +13,21 @@ import Dict exposing (Dict)
 type alias Model = 
     { selectedPhotoUrl : Maybe String
     , photos : Dict String Photo
+    , root : Folder
     }
+
+type Folder =
+    Folder -- single variant has the same name as the type
+        { name : String
+        , photoUrls : List String
+        , subfolders : List Folder
+        }
 
 initialModel : Model
 initialModel =
     { selectedPhotoUrl = Nothing
     , photos = Dict.empty
+    , root = Folder { name  = "Loading...", photoUrls = [], subfolders  [] }
     }
 
 init : () -> ( Model, Cmd Msg )
@@ -57,7 +66,40 @@ modelDecoder =
                 } 
               )
             ]
+        , root =
+            Folder
+                { name = "Photos", photoUrls = []
+                , subfolders =
+                    [ Folder
+                        { name = "2016", photoUrls = [ "trevi", "coli" ]
+                        , subfolders =
+                            [ Folder
+                                { name = "outdoors"
+                                , photoUrls = [], subfolders = []
+                                }
+                            , Folder
+                                { name = "indoors"
+                                , photoUrls = [ "fresco" ], subfolders = []
+                                }
+                            ]
+                        }
+                    , Folder
+                        { name = "2017", photoUrls = []
+                        , subfolders = 
+                            [ Folder
+                                { name = "outdoors"
+                                , photoUrls = [], subfolders = []
+                                }
+                            , Folder
+                                { name = "indoors"
+                                , photoUrls = [], subfolders = []
+                                }
+                            ]
+                        }
+                    ]
+                }
         }
+
 
 type Msg 
     = ClickedPhoto String
