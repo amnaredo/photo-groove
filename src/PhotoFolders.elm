@@ -10,8 +10,8 @@ import Json.Decode.Pipeline exposing (required)
 
 
 type alias Model = 
-{ selectedPhotoUrl : Maybe String
-}
+    { selectedPhotoUrl : Maybe String
+    }
 
 initialModel : Model
 initialModel =
@@ -38,13 +38,13 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         ClickedPhoto url ->
-            ( { model | selectedUrl = Just url }, Cmd.none )
+            ( { model | selectedPhotoUrl = Just url }, Cmd.none )
         
         GotInitialModel (Ok newModel) ->
             ( newModel, Cmd.none )
 
         GotInitialModel (Err _) ->
-            ( model, cmd.None )
+            ( model, Cmd.none )
 
 view : Model -> Html Msg
 view model =
