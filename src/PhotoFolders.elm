@@ -27,7 +27,7 @@ initialModel : Model
 initialModel =
     { selectedPhotoUrl = Nothing
     , photos = Dict.empty
-    , root = Folder { name  = "Loading...", photoUrls = [], subfolders  [] }
+    , root = Folder { name  = "Loading...", photoUrls = [], subfolders = [] }
     }
 
 init : () -> ( Model, Cmd Msg )
@@ -150,7 +150,11 @@ view model =
 
     in
     div [ class "content" ]
-        [ div [ class "selected-photo" ] [ selectedPhoto ] ]
+        [ div [ class "folders" ]
+            [ h1 [] [ text "Folders" ]
+            , viewFolder model.root
+            ]
+        , div [ class "selected-photo" ] [ selectedPhoto ] ]
 
 main : Program () Model Msg
 main =
@@ -179,6 +183,7 @@ viewSelectedPhoto photo =
         , div [ class "related-photos" ]
             (List.map viewRelatedPhoto photo.relatedUrls)
         ]
+        
 
 viewRelatedPhoto : String -> Html Msg
 viewRelatedPhoto url =
@@ -188,6 +193,17 @@ viewRelatedPhoto url =
         , src (urlPrefix ++ "photos/" ++ url ++ "/thumb")
         ]
         []
+
+viewFolder : Folder -> Html Msg
+viewFolder (Folder folder) = -- destructuring single-variant custom type (instead of case-expression)
+    let
+        subfolders =
+            List.map viewFolder folder.subfolders
+    in
+    div [ class "folder" ]
+        [ label [] [ text folder.name ]
+        , div [ class "subfolders" ] subfolders
+        ]
 
 urlPrefix : String
 urlPrefix =
