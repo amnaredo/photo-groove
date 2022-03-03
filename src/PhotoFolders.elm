@@ -32,7 +32,32 @@ init _ =
 
 modelDecoder : Decoder Model
 modelDecoder =
-    Decode.succeed initialModel
+    Decode.succeed 
+        { selectedPhotoUrl = Just "trevi"
+        , photos = Dict.fromList
+            [ ( "trevi"
+              , { title = "Trevi"
+                , relatedUrls = [ "coli", "fresco" ]
+                , size = 34
+                , url ="trevi"
+                }
+              )
+            , ( "fresco"
+              , { title = "Fresco"
+                , relatedUrls = [ "trevi" ]
+                , size = 46
+                , url ="fresco"
+                }
+              )
+            , ( "coli"
+              , { title = "Coliseum"
+                , relatedUrls = [ "trevi", "fresco" ]
+                , size = 36
+                , url ="coli"
+                } 
+              )
+            ]
+        }
 
 type Msg 
     = ClickedPhoto String
@@ -52,7 +77,38 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    h1 [] [ text "The Grooviest Folders the world has ever seen" ]
+    let
+        photoByUrl : String -> Maybe Photo
+        photoByUrl url =
+            Dict.get url model.photos
+        
+        selectedPhoto : Html Msg
+        selectedPhoto =
+            case Maybe.andThen photoByUrl model.selectedPhotoUrl of
+                Just photo ->
+                    viewSelectedPhoto photo
+                
+                Nothing ->
+                    text ""
+
+        -- previous version, not using Maybe.andThen
+        -- selectedPhoto : Html Msg
+        -- selectedPhoto =
+        --     case model.selectedPhotoUrl of
+        --         Just url ->
+        --             case Dict.get url model.photos of
+        --                 Just photo ->
+        --                     viewSelectedPhoto photo
+                        
+        --                 Nothing ->
+        --                     text ""
+                
+        --         Nothing ->
+        --             text ""
+
+    in
+    div [ class "content" ]
+        [ div [ class "selected-photo" ] [ selectedPhoto ] ]
 
 main : Program () Model Msg
 main =
@@ -69,6 +125,7 @@ type alias Photo =
     , relatedUrls : List String
     , url : String
     }
+
 
 viewSelectedPhoto : Photo -> Html Msg
 viewSelectedPhoto photo =
