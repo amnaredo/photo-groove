@@ -42,64 +42,12 @@ init _ =
 
 modelDecoder : Decoder Model
 modelDecoder =
-    Decode.succeed 
-        { selectedPhotoUrl = Just "trevi"
-        , photos = Dict.fromList
-            [ ( "trevi"
-              , { title = "Trevi"
-                , relatedUrls = [ "coli", "fresco" ]
-                , size = 34
-                , url ="trevi"
-                }
-              )
-            , ( "fresco"
-              , { title = "Fresco"
-                , relatedUrls = [ "trevi" ]
-                , size = 46
-                , url ="fresco"
-                }
-              )
-            , ( "coli"
-              , { title = "Coliseum"
-                , relatedUrls = [ "trevi", "fresco" ]
-                , size = 36
-                , url ="coli"
-                } 
-              )
-            ]
-        , root =
-            Folder
-                { name = "Photos", expanded = True, photoUrls = []
-                , subfolders =
-                    [ Folder
-                        { name = "2016", expanded = True, photoUrls = [ "trevi", "coli" ]
-                        , subfolders =
-                            [ Folder
-                                { name = "outdoors"
-                                , expanded = True, photoUrls = [], subfolders = []
-                                }
-                            , Folder
-                                { name = "indoors"
-                                , expanded = True, photoUrls = [ "fresco" ], subfolders = []
-                                }
-                            ]
-                        }
-                    , Folder
-                        { name = "2017", expanded = True, photoUrls = []
-                        , subfolders = 
-                            [ Folder
-                                { name = "outdoors"
-                                , expanded = True, photoUrls = [], subfolders = []
-                                }
-                            , Folder
-                                { name = "indoors"
-                                , expanded = True, photoUrls = [], subfolders = []
-                                }
-                            ]
-                        }
-                    ]
-                }
-        }
+    Decode.map2 -- if both decoders succeed, run the callback to get the final value
+        (\photos root ->
+            { photos = photos, root = root, selectedPhotoUrl = Nothing }    
+        )
+        modelPhotosDecoder
+        folderDecoder
 
 
 type Msg 
@@ -131,7 +79,7 @@ view model =
         
         selectedPhoto : Html Msg
         selectedPhoto =
-            case Maybe.andThen photoByUrl model.selectedPhotoUrl of
+            case Maybe.andThen photoByUrl model.selectedPhotoUrl of -- like Maybe.map, except it can change outcome to Nothing
                 Just photo ->
                     viewSelectedPhoto photo
                 
@@ -159,7 +107,8 @@ view model =
             [ h1 [] [ text "Folders" ]
             , viewFolder End model.root
             ]
-        , div [ class "selected-photo" ] [ selectedPhoto ] ]
+        , div [ class "selected-photo" ] [ selectedPhoto ]
+        ]
 
 main : Program () Model Msg
 main =
@@ -209,7 +158,7 @@ viewFolder path (Folder folder) =
     let
         viewSubfolder : Int -> Folder -> Html Msg
         viewSubfolder index subfolder =
-            viewFolder (appendIndex index path) subfolder
+            viewFolder (appendIndex index path) subfolder -- recursive function
         
         folderLabel =
             label [ onClick (ClickedFolder path) ] [ text folder.name ]
@@ -218,7 +167,7 @@ viewFolder path (Folder folder) =
         let
             contents =
                 List.append
-                    (List.indexedMap viewSubfolder folder.subfolders)
+                    (List.indexedMap viewSubfolder folder.subfolders) -- like map, but callback receives current index as arg
                     (List.map viewPhoto folder.photoUrls)
         in
         div [ class "folder expanded" ]
@@ -249,7 +198,7 @@ appendIndex index path =
 --         , div [ class "subfolders" ] subfolders
 --         ]
 
-type FolderPath
+type FolderPath -- recursive custom type
     = End
     | Subfolder Int FolderPath
 
@@ -274,6 +223,68 @@ toggleExpanded path (Folder folder) =
                         currentSubfolder
             in
             Folder { folder | subfolders = subfolders }
+
+type alias JsonPhoto =
+    { title : String
+    , size : Int
+    , relatedUrls : List String
+    }
+
+jsonPhotoDecoder : Decoder JsonPhoto
+jsonPhotoDecoder =
+    Decode.succeed JsonPhoto
+        |> required "title" string
+        |> required "size" int
+        |> required "related_photos" (list string)
+
+finishPhoto : ( String, JsonPhoto ) -> ( String, Photo )
+finishPhoto ( url, json ) =
+    ( url
+    , { url = url
+      , size = json.size
+      , title = json.title
+      , relatedUrls = json.relatedUrls
+      }
+    )
+
+fromPairs : List ( String, JsonPhoto ) -> Dict String Photo
+fromPairs pairs =
+    pairs
+        |> List.map finishPhoto
+        |> Dict.fromList
+
+photosDecoder : Decoder (Dict String Photo)
+photosDecoder =
+-- First decode the photos into key-value
+-- pairs; then finish turning them into a Dict of Photo records.
+    Decode.keyValuePairs jsonPhotoDecoder
+        |> Decode.map fromPairs
+
+folderDecoder : Decoder Folder
+folderDecoder = 
+    Decode.succeed folderFromJson
+        |> required "name" string
+        |> required "photos" photosDecoder
+        |> required "subfolders" (Decode.lazy (\_ -> list folderDecoder)) -- to break the cyclic definition
+
+folderFromJson : String -> Dict String Photo -> List Folder -> Folder
+folderFromJson name photos subfolders =
+    Folder
+        { name = name
+        , expanded = True
+        , subfolders = subfolders
+        , photoUrls = Dict.keys photos
+        }
+
+modelPhotosDecoder : Decoder (Dict String Photo)
+modelPhotosDecoder = 
+    Decode.succeed modelPhotosFromJson
+        |> required "photos" photosDecoder
+        |> required "subfolders" (Decode.lazy (\_ -> list modelPhotosDecoder))
+
+modelPhotosFromJson : Dict String Photo -> List (Dict String Photo) -> Dict String Photo
+modelPhotosFromJson folderPhotos subfolderPhotos =
+    List.foldl Dict.union folderPhotos subfolderPhotos
 
 
 urlPrefix : String
