@@ -7,15 +7,19 @@ import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Decode exposing (Decoder, int, list, string)
 import Json.Decode.Pipeline exposing (required)
+import Dict exposing (Dict)
 
 
 type alias Model = 
     { selectedPhotoUrl : Maybe String
+    , photos : Dict String Photo
     }
 
 initialModel : Model
 initialModel =
-    { selectedPhotoUrl = Nothing }
+    { selectedPhotoUrl = Nothing
+    , photos = Dict.empty
+    }
 
 init : () -> ( Model, Cmd Msg )
 init _ =
@@ -58,3 +62,34 @@ main =
         , update = update
         , subscriptions = \_ -> Sub.none
         }
+
+type alias Photo =
+    { title : String
+    , size : Int
+    , relatedUrls : List String
+    , url : String
+    }
+
+viewSelectedPhoto : Photo -> Html Msg
+viewSelectedPhoto photo =
+    div
+        [ class "selected-photo" ]
+        [ h2 [] [ text photo.title ]
+        , img [ src (urlPrefix ++ "photos/" ++ photo.url ++ "/full") ] []
+        , span [] [ text "Related" ]
+        , div [ class "related-photos" ]
+            (List.map viewRelatedPhoto photo.relatedUrls)
+        ]
+
+viewRelatedPhoto : String -> Html Msg
+viewRelatedPhoto url =
+    img
+        [ class "related-photo"
+        , onClick (ClickedPhoto url)
+        , src (urlPrefix ++ "photos/" ++ url ++ "/thumb")
+        ]
+        []
+
+urlPrefix : String
+urlPrefix =
+    "http://elm-in-action.com/"
