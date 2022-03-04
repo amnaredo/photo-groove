@@ -110,14 +110,14 @@ view model =
         , div [ class "selected-photo" ] [ selectedPhoto ]
         ]
 
-main : Program () Model Msg
-main =
-    Browser.element
-        { init = init
-        , view = view
-        , update = update
-        , subscriptions = \_ -> Sub.none
-        }
+-- main : Program () Model Msg
+-- main =
+--     Browser.element
+--         { init = init
+--         , view = view
+--         , update = update
+--         , subscriptions = \_ -> Sub.none
+--         }
 
 type alias Photo =
     { title : String
