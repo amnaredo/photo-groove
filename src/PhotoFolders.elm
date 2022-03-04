@@ -1,35 +1,39 @@
 module PhotoFolders exposing (Model, Msg, init, update, view)
 
 import Browser
+import Dict exposing (Dict)
 import Html exposing (..)
 import Html.Attributes exposing (class, href, src)
 import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Decode exposing (Decoder, int, list, string)
 import Json.Decode.Pipeline exposing (required)
-import Dict exposing (Dict)
 
 
-type alias Model = 
+type alias Model =
     { selectedPhotoUrl : Maybe String
     , photos : Dict String Photo
     , root : Folder
     }
 
-type Folder =
-    Folder -- single variant has the same name as the type
+
+type Folder
+    = Folder
+        -- single variant has the same name as the type
         { name : String
         , photoUrls : List String
         , subfolders : List Folder
         , expanded : Bool
         }
 
+
 initialModel : Model
 initialModel =
     { selectedPhotoUrl = Nothing
     , photos = Dict.empty
-    , root = Folder { name  = "Loading...", expanded = True, photoUrls = [], subfolders = [] }
+    , root = Folder { name = "Loading...", expanded = True, photoUrls = [], subfolders = [] }
     }
+
 
 init : Maybe String -> ( Model, Cmd Msg )
 init selectedFilename =
@@ -40,20 +44,23 @@ init selectedFilename =
         }
     )
 
+
 modelDecoder : Decoder Model
 modelDecoder =
-    Decode.map2 -- if both decoders succeed, run the callback to get the final value
+    Decode.map2
+        -- if both decoders succeed, run the callback to get the final value
         (\photos root ->
-            { photos = photos, root = root, selectedPhotoUrl = Nothing }    
+            { photos = photos, root = root, selectedPhotoUrl = Nothing }
         )
         modelPhotosDecoder
         folderDecoder
 
 
-type Msg 
+type Msg
     = ClickedPhoto String
     | GotInitialModel (Result Http.Error Model)
     | ClickedFolder FolderPath
+
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -63,12 +70,13 @@ update msg model =
 
         ClickedPhoto url ->
             ( { model | selectedPhotoUrl = Just url }, Cmd.none )
-        
+
         GotInitialModel (Ok newModel) ->
             ( { newModel | selectedPhotoUrl = model.selectedPhotoUrl }, Cmd.none )
 
         GotInitialModel (Err _) ->
             ( model, Cmd.none )
+
 
 view : Model -> Html Msg
 view model =
@@ -76,13 +84,14 @@ view model =
         photoByUrl : String -> Maybe Photo
         photoByUrl url =
             Dict.get url model.photos
-        
+
         selectedPhoto : Html Msg
         selectedPhoto =
-            case Maybe.andThen photoByUrl model.selectedPhotoUrl of -- like Maybe.map, except it can change outcome to Nothing
+            case Maybe.andThen photoByUrl model.selectedPhotoUrl of
+                -- like Maybe.map, except it can change outcome to Nothing
                 Just photo ->
                     viewSelectedPhoto photo
-                
+
                 Nothing ->
                     text ""
 
@@ -94,13 +103,10 @@ view model =
         --             case Dict.get url model.photos of
         --                 Just photo ->
         --                     viewSelectedPhoto photo
-                        
         --                 Nothing ->
         --                     text ""
-                
         --         Nothing ->
         --             text ""
-
     in
     div [ class "content" ]
         [ div [ class "folders" ]
@@ -109,6 +115,8 @@ view model =
             ]
         , div [ class "selected-photo" ] [ selectedPhoto ]
         ]
+
+
 
 -- main : Program () Model Msg
 -- main =
@@ -119,12 +127,14 @@ view model =
 --         , subscriptions = \_ -> Sub.none
 --         }
 
+
 type alias Photo =
     { title : String
     , size : Int
     , relatedUrls : List String
     , url : String
     }
+
 
 viewPhoto : String -> Html Msg
 viewPhoto url =
@@ -142,7 +152,7 @@ viewSelectedPhoto photo =
         , div [ class "related-photos" ]
             (List.map viewRelatedPhoto photo.relatedUrls)
         ]
-        
+
 
 viewRelatedPhoto : String -> Html Msg
 viewRelatedPhoto url =
@@ -153,13 +163,15 @@ viewRelatedPhoto url =
         ]
         []
 
+
 viewFolder : FolderPath -> Folder -> Html Msg
 viewFolder path (Folder folder) =
     let
         viewSubfolder : Int -> Folder -> Html Msg
         viewSubfolder index subfolder =
-            viewFolder (appendIndex index path) subfolder -- recursive function
-        
+            viewFolder (appendIndex index path) subfolder
+
+        -- recursive function
         folderLabel =
             label [ onClick (ClickedFolder path) ] [ text folder.name ]
     in
@@ -167,13 +179,15 @@ viewFolder path (Folder folder) =
         let
             contents =
                 List.append
-                    (List.indexedMap viewSubfolder folder.subfolders) -- like map, but callback receives current index as arg
+                    (List.indexedMap viewSubfolder folder.subfolders)
+                    -- like map, but callback receives current index as arg
                     (List.map viewPhoto folder.photoUrls)
         in
         div [ class "folder expanded" ]
             [ folderLabel
             , div [ class "contents" ] contents
             ]
+
     else
         div [ class "folder collapsed" ] [ folderLabel ]
 
@@ -183,9 +197,11 @@ appendIndex index path =
     case path of
         End ->
             Subfolder index End
-        
+
         Subfolder subfolderIndex remainingPath ->
-            Subfolder subfolderIndex (appendIndex index remainingPath) 
+            Subfolder subfolderIndex (appendIndex index remainingPath)
+
+
 
 -- viewFolder : FolderPath -> Folder -> Html Msg
 -- viewFolder path (Folder folder) = -- destructuring single-variant custom type (instead of case-expression)
@@ -198,9 +214,13 @@ appendIndex index path =
 --         , div [ class "subfolders" ] subfolders
 --         ]
 
-type FolderPath -- recursive custom type
+
+type
+    FolderPath
+    -- recursive custom type
     = End
     | Subfolder Int FolderPath
+
 
 toggleExpanded : FolderPath -> Folder -> Folder
 toggleExpanded path (Folder folder) =
@@ -224,11 +244,13 @@ toggleExpanded path (Folder folder) =
             in
             Folder { folder | subfolders = subfolders }
 
+
 type alias JsonPhoto =
     { title : String
     , size : Int
     , relatedUrls : List String
     }
+
 
 jsonPhotoDecoder : Decoder JsonPhoto
 jsonPhotoDecoder =
@@ -236,6 +258,7 @@ jsonPhotoDecoder =
         |> required "title" string
         |> required "size" int
         |> required "related_photos" (list string)
+
 
 finishPhoto : ( String, JsonPhoto ) -> ( String, Photo )
 finishPhoto ( url, json ) =
@@ -247,25 +270,33 @@ finishPhoto ( url, json ) =
       }
     )
 
+
 fromPairs : List ( String, JsonPhoto ) -> Dict String Photo
 fromPairs pairs =
     pairs
         |> List.map finishPhoto
         |> Dict.fromList
 
+
 photosDecoder : Decoder (Dict String Photo)
 photosDecoder =
--- First decode the photos into key-value
--- pairs; then finish turning them into a Dict of Photo records.
+    -- First decode the photos into key-value
+    -- pairs; then finish turning them into a Dict of Photo records.
     Decode.keyValuePairs jsonPhotoDecoder
         |> Decode.map fromPairs
 
+
 folderDecoder : Decoder Folder
-folderDecoder = 
+folderDecoder =
     Decode.succeed folderFromJson
         |> required "name" string
         |> required "photos" photosDecoder
-        |> required "subfolders" (Decode.lazy (\_ -> list folderDecoder)) -- to break the cyclic definition
+        |> required "subfolders" (Decode.lazy (\_ -> list folderDecoder))
+
+
+
+-- to break the cyclic definition
+
 
 folderFromJson : String -> Dict String Photo -> List Folder -> Folder
 folderFromJson name photos subfolders =
@@ -276,11 +307,13 @@ folderFromJson name photos subfolders =
         , photoUrls = Dict.keys photos
         }
 
+
 modelPhotosDecoder : Decoder (Dict String Photo)
-modelPhotosDecoder = 
+modelPhotosDecoder =
     Decode.succeed modelPhotosFromJson
         |> required "photos" photosDecoder
         |> required "subfolders" (Decode.lazy (\_ -> list modelPhotosDecoder))
+
 
 modelPhotosFromJson : Dict String Photo -> List (Dict String Photo) -> Dict String Photo
 modelPhotosFromJson folderPhotos subfolderPhotos =

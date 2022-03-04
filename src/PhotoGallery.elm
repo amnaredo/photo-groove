@@ -1,8 +1,8 @@
-port module PhotoGallery exposing (init, Model, Msg, update, view, subscriptions)
+port module PhotoGallery exposing (Model, Msg, init, subscriptions, update, view)
 
 import Browser
 import Html exposing (..)
-import Html.Attributes as Attr exposing (id, class, classList, src, type_, name, title)
+import Html.Attributes as Attr exposing (class, classList, id, name, src, title, type_)
 import Html.Events exposing (on, onClick)
 import Http
 import Json.Decode exposing (Decoder, at, int, list, string, succeed)
@@ -16,7 +16,7 @@ urlPrefix =
     "http://elm-in-action.com/"
 
 
-type Msg 
+type Msg
     = ClickedPhoto String
     | ClickedSize ThumbnailSize
     | ClickedSurpriseMe
@@ -32,15 +32,15 @@ view : Model -> Html Msg
 view model =
     div [ class "content" ] <|
         case model.status of
-            Loaded photos selectedUrl -> 
+            Loaded photos selectedUrl ->
                 viewLoaded photos selectedUrl model
 
             Loading ->
                 []
 
             Errored errorMessage ->
-                [ text ("Error: " ++ errorMessage ) ]
-        
+                [ text ("Error: " ++ errorMessage) ]
+
 
 viewFilter : (Int -> Msg) -> String -> Int -> Html Msg
 viewFilter toMsg name magnitude =
@@ -58,23 +58,23 @@ viewFilter toMsg name magnitude =
 
 viewLoaded : List Photo -> String -> Model -> List (Html Msg)
 viewLoaded photos selectedUrl model =
-        -- [ h1 [] [ text "Photo Groove" ]
-        [ button
-            [ onClick ClickedSurpriseMe ]
-            [ text "Surprise Me!" ]
-        , div [ class "activity" ] [ text model.activity ]
-        , div [ class "filters" ]
-            [ viewFilter SlidHue "Hue" model.hue
-            , viewFilter SlidRipple "Ripple" model.ripple
-            , viewFilter SlidNoise "Noise" model.noise
-            ]
-        , h3 [] [ text "Thumbnail Size:" ]
-        , div [ id "choose-size" ]
-                (List.map viewSizeChooser [ Small, Medium, Large ])
-        , div [ id "thumbnails", class (sizeToString model.chosenSize) ] 
-            (List.map (viewThumbnail selectedUrl) photos )
-        , canvas [ id "main-canvas", class "large" ] []
+    -- [ h1 [] [ text "Photo Groove" ]
+    [ button
+        [ onClick ClickedSurpriseMe ]
+        [ text "Surprise Me!" ]
+    , div [ class "activity" ] [ text model.activity ]
+    , div [ class "filters" ]
+        [ viewFilter SlidHue "Hue" model.hue
+        , viewFilter SlidRipple "Ripple" model.ripple
+        , viewFilter SlidNoise "Noise" model.noise
         ]
+    , h3 [] [ text "Thumbnail Size:" ]
+    , div [ id "choose-size" ]
+        (List.map viewSizeChooser [ Small, Medium, Large ])
+    , div [ id "thumbnails", class (sizeToString model.chosenSize) ]
+        (List.map (viewThumbnail selectedUrl) photos)
+    , canvas [ id "main-canvas", class "large" ] []
+    ]
 
 
 viewThumbnail : String -> Photo -> Html Msg
@@ -82,8 +82,8 @@ viewThumbnail selectedUrl thumb =
     img
         [ src (urlPrefix ++ thumb.url)
         , title (thumb.title ++ " [" ++ String.fromInt thumb.size ++ " KB]")
-        , classList [ ("selected", selectedUrl == thumb.url ) ] 
-        , onClick (ClickedPhoto thumb.url )
+        , classList [ ( "selected", selectedUrl == thumb.url ) ]
+        , onClick (ClickedPhoto thumb.url)
         ]
         []
 
@@ -99,18 +99,21 @@ viewSizeChooser size =
 sizeToString : ThumbnailSize -> String
 sizeToString size =
     case size of
-        Small -> "small"
+        Small ->
+            "small"
 
-        Medium -> "med"
+        Medium ->
+            "med"
 
-        Large -> "large"
+        Large ->
+            "large"
 
 
 type ThumbnailSize
     = Small
     | Medium
     | Large
-    
+
 
 type alias Photo =
     { url : String
@@ -119,7 +122,7 @@ type alias Photo =
     }
 
 
-type alias FilterOptions = 
+type alias FilterOptions =
     { url : String
     , filters : List { name : String, amount : Float }
     }
@@ -139,7 +142,7 @@ photoDecoder =
         |> optional "title" string "(untitled)"
 
 
-type Status 
+type Status
     = Loading
     | Loaded (List Photo) String
     | Errored String
@@ -156,7 +159,7 @@ type alias Model =
 
 
 initialModel : Model
-initialModel = 
+initialModel =
     { status = Loading
     , chosenSize = Medium
     , hue = 5
@@ -169,25 +172,26 @@ initialModel =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        GotRandomPhoto photo -> 
+        GotRandomPhoto photo ->
             applyFilters { model | status = selectUrl photo.url model.status }
 
-        ClickedPhoto url -> 
+        ClickedPhoto url ->
             applyFilters { model | status = selectUrl url model.status }
 
-        ClickedSize size -> ( { model | chosenSize = size }, Cmd.none )
+        ClickedSize size ->
+            ( { model | chosenSize = size }, Cmd.none )
 
-        ClickedSurpriseMe -> 
+        ClickedSurpriseMe ->
             case model.status of
                 Loaded (firstPhoto :: otherPhotos) _ ->
                     Random.uniform firstPhoto otherPhotos
                         |> Random.generate GotRandomPhoto
                         |> Tuple.pair model
-                    -- ( model 
-                    -- , Random.generate GotRandomPhoto
-                    --     (Random.uniform firstPhoto otherPhotos)    
-                    -- )
 
+                -- ( model
+                -- , Random.generate GotRandomPhoto
+                --     (Random.uniform firstPhoto otherPhotos)
+                -- )
                 Loaded [] _ ->
                     ( model, Cmd.none )
 
@@ -196,21 +200,21 @@ update msg model =
 
                 Errored _ ->
                     ( model, Cmd.none )
-        
+
         GotPhotos (Ok photos) ->
             case photos of
                 first :: _ ->
                     applyFilters
                         { model | status = Loaded photos first.url }
-                        
+
                 [] ->
                     ( { model | status = Errored "0 photos found" }, Cmd.none )
 
-        GotPhotos (Err _) -> 
+        GotPhotos (Err _) ->
             ( { model | status = Errored "Server error!" }, Cmd.none )
 
         -- GotPhotos result ->
-        --     case result of 
+        --     case result of
         --         Ok responseStr ->
         --             case String.split "," responseStr of
         --                 (firstUrl :: _) as urls ->
@@ -219,13 +223,10 @@ update msg model =
         --                             List.map Photo urls
         --                     in
         --                     ( { model | status = Loaded photos firstUrl }, Cmd.none )
-
         --                 [] ->
         --                     ( { model | status = Errored "0 photos found" }, Cmd.none )
-
         --         Err httpError ->
         --             ( { model | status = Errored "Server error!" }, Cmd.none )
-
         SlidHue hue ->
             applyFilters { model | hue = hue }
 
@@ -240,20 +241,21 @@ update msg model =
 
 
 applyFilters : Model -> ( Model, Cmd Msg )
-applyFilters model = 
+applyFilters model =
     case model.status of
         Loaded _ selectedUrl ->
             let
-                filters = 
+                filters =
                     [ { name = "Hue", amount = toFloat model.hue / 11 }
                     , { name = "Ripple", amount = toFloat model.ripple / 11 }
                     , { name = "Noise", amount = toFloat model.noise / 11 }
                     ]
-                url = 
+
+                url =
                     urlPrefix ++ "large/" ++ selectedUrl
             in
             ( model, setFilters { url = url, filters = filters } )
-        
+
         Loading ->
             ( model, Cmd.none )
 
@@ -266,7 +268,7 @@ selectUrl url status =
     case status of
         Loaded photos _ ->
             Loaded photos url
-        
+
         Loading ->
             status
 
@@ -295,7 +297,8 @@ main =
 init : Float -> ( Model, Cmd Msg )
 init flags =
     let
-        activity = "Initializing Pasta v" ++ String.fromFloat flags
+        activity =
+            "Initializing Pasta v" ++ String.fromFloat flags
     in
     ( { initialModel | activity = activity }, initialCmd )
 
