@@ -49,24 +49,23 @@ viewHeader page =
                 , navLink Gallery { url = "/gallery", caption = "Gallery" }
                 ]
         
-        navLink : Page -> { url : String, caption : String } -> Html Msg
-        navLink targetPage { url, caption } =
-            li [ classList [ ( "active", isActive { link = targetPage, page = page } ) ] ]
+        navLink : Route -> { url : String, caption : String } -> Html Msg
+        navLink route { url, caption } =
+            li [ classList [ ( "active", isActive { link = route, page = page } ) ] ]
                 [ a [ href url ] [ text caption ] ]
     in
     nav [] [ logo, links ]
     
-isActive : { link: Page, page : Page } -> Bool
+isActive : { link: Route, page : Page } -> Bool
 isActive { link, page } =
     case ( link,            page        ) of
          ---------------------------------------
-         ( Gallery,         Gallery         ) -> True
+         ( Gallery,         GalleryPage         ) -> True
          ( Gallery,         _               ) -> False
-         ( Folders,         Folders         ) -> True
-         ( Folders,         SelectedPhoto _ ) -> True
+         ( Folders,         FoldersPage     ) -> True
          ( Folders,         _               ) -> False
          ( SelectedPhoto _, _               ) -> False
-         ( NotFound,        _               ) -> False
+
 
 viewFooter : Html msg
 viewFooter =
@@ -103,7 +102,7 @@ urlToPage url =
     Parser.parse parser url
         |> Maybe.withDefault NotFound
 
-parser : Parser (Page -> a) a
+parser : Parser (Route -> a) a
 parser =
     Parser.oneOf
         [ Parser.map Folders Parser.top
