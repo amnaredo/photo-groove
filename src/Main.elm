@@ -14,8 +14,8 @@ type alias Model =
     { page : Page, key : Nav.Key, version : Float }
 
 type Page
-    = Gallery Gallery.Model
-    | Folders Folders.Model
+    = GalleryPage Gallery.Model
+    | FoldersPage Folders.Model
     | NotFound
 
 type Route
@@ -27,7 +27,15 @@ view : Model -> Document Msg
 view model =
     let
         content = 
-            text "This isn't even my final form!"
+            case model.page of
+                FoldersPage folders ->
+                    Folders.view folders
+
+                GalleryPage gallery ->
+                    Gallery.view gallery
+
+                NotFound ->
+                    text "Not Found"
     in
     { title = "Photo Groove, SPA Style" 
     , body = 
@@ -60,9 +68,9 @@ isActive : { link: Route, page : Page } -> Bool
 isActive { link, page } =
     case ( link,            page        ) of
          ---------------------------------------
-         ( Gallery,         GalleryPage         ) -> True
+         ( Gallery,         GalleryPage _   ) -> True
          ( Gallery,         _               ) -> False
-         ( Folders,         FoldersPage     ) -> True
+         ( Folders,         FoldersPage _   ) -> True
          ( Folders,         _               ) -> False
          ( SelectedPhoto _, _               ) -> False
 
@@ -97,7 +105,7 @@ init : Float -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init version url key =
     ( { page = urlToPage url, key = key, version = version }, Cmd.none )
 
-urlToPage : Url -> Page
+urlToPage : Float -> Url -> Page
 urlToPage version url =
     case Parser.parse parser url of
         Just Gallery ->
