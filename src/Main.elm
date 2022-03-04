@@ -7,16 +7,21 @@ import Html exposing (Html, a, footer, h1, li, nav, text, ul)
 import Html.Attributes exposing (classList, href)
 import Html.Lazy exposing (lazy)
 import Url.Parser as Parser exposing ((</>), Parser, s, string)
-
+import PhotoFolders as Folders
+import PhotoGallery as Gallery
 
 type alias Model =
     { page : Page, key : Nav.Key }
 
 type Page
-    = SelectedPhoto String
-    | Gallery
-    | Folders
+    = Gallery Gallery.Model
+    | Folders Folders.Model
     | NotFound
+
+type Route
+    = Gallery
+    | Folders
+    | SelectedPhoto String
 
 view : Model -> Document Msg
 view model =
