@@ -30,9 +30,11 @@ view model =
             case model.page of
                 FoldersPage folders ->
                     Folders.view folders
+                        |> Html.map GotFoldersMsg
 
                 GalleryPage gallery ->
                     Gallery.view gallery
+                        |> Html.map GotGalleryMsg
 
                 NotFound ->
                     text "Not Found"
@@ -82,6 +84,8 @@ viewFooter =
 type Msg
     = ClickedLink Browser.UrlRequest
     | ChangedUrl Url
+    | GotFoldersMsg Folders.Msg
+    | GotGalleryMsg Gallery.Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -99,11 +103,18 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    case model.page of
+        GalleryPage gallery ->
+            Gallery.subscriptions gallery
+                |> Sub.map GotGalleryMsg
+        
+        _ ->
+            Sub.none
+
 
 init : Float -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init version url key =
-    ( { page = urlToPage url, key = key, version = version }, Cmd.none )
+    ( { page = urlToPage version url, key = key, version = version }, Cmd.none )
 
 urlToPage : Float -> Url -> Page
 urlToPage version url =
