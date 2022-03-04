@@ -6,13 +6,15 @@ import Url exposing (Url)
 import Html exposing (Html, a, footer, h1, li, nav, text, ul)
 import Html.Attributes exposing (classList, href)
 import Html.Lazy exposing (lazy)
+import Url.Parser as Parser exposing ((</>), Parser, s, string)
 
 
 type alias Model =
     { page : Page }
 
 type Page
-    = Gallery
+    = SelectedPhoto String
+    | Gallery
     | Folders
     | NotFound
 
@@ -44,11 +46,22 @@ viewHeader page =
         
         navLink : Page -> { url : String, caption : String } -> Html Msg
         navLink targetPage { url, caption } =
-            li [ classList [ ( "active", page == targetPage ) ] ]
+            li [ classList [ ( "active", isActive { link = targetPage, page = page } ) ] ]
                 [ a [ href url ] [ text caption ] ]
     in
     nav [] [ logo, links ]
     
+isActive : { link: Page, page : Page } -> Bool
+isActive { link, page } =
+    case ( link,            page        ) of
+         ---------------------------------------
+         ( Gallery,         Gallery         ) -> True
+         ( Gallery,         _               ) -> False
+         ( Folders,         Folders         ) -> True
+         ( Folders,         SelectedPhoto _ ) -> True
+         ( Folders,         _               ) -> False
+         ( SelectedPhoto _, _               ) -> False
+         ( NotFound,        _               ) -> False
 
 viewFooter : Html msg
 viewFooter =
@@ -67,15 +80,20 @@ subscriptions model =
 
 init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
-    case url.path of
-        "/gallery" ->
-            ( { page = Gallery }, Cmd.none )
+    ( { page = urlToPage url }, Cmd.none )
 
-        "/" ->
-            ( { page = Folders }, Cmd.none )
+urlToPage : Url -> Page
+urlToPage url =
+    Parser.parse parser url
+        |> Maybe.withDefault NotFound
 
-        _ ->
-            ( { page = NotFound }, Cmd.none )
+parser : Parser (Page -> a) a
+parser =
+    Parser.oneOf
+        [ Parser.map Folders Parser.top
+        , Parser.map Gallery (s "gallery")
+        , Parser.map SelectedPhoto (s "photos" </> Parser.string)
+        ]
 
 main : Program () Model Msg
 main =
